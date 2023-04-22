@@ -8,6 +8,7 @@ use crate::screen::*;
 pub struct Editor {
     screen: Screen,
     keyboard: Keyboard,
+    cursor: Position,
 }
 
 impl Editor {
@@ -15,6 +16,7 @@ impl Editor {
         Ok(Self {
             screen: Screen::new()?,
             keyboard: Keyboard {},
+            cursor: Position {x:0 , y:0},
         })
     }
     pub fn start(&mut self) -> Result<()> {
@@ -23,14 +25,15 @@ impl Editor {
             if self.refresh_screen().is_err() {
                 self.die("unable to refresh screen");
             }
+            self.screen.move_to(self.cursor)?;
             self.screen.flush()?;
-            if self.process_key() {
+            if self.process_key()? {
                 break;
             }
         }
         terminal::disable_raw_mode()
     }
-    pub fn process_key(&mut self) -> bool {
+    pub fn process_key(&mut self) -> Result<bool> {
         let c = self.keyboard.read_key();
 
         match c {
@@ -39,12 +42,12 @@ impl Editor {
                 modifiers: KeyModifiers::CONTROL,
                 kind: _,
                 state: _,
-            }) => true,
+            }) => Ok(true),
             Err(EditorResult::KeyRradFailed) => {
                 self.die("unable open the keyboard !");
-                false
+                Ok(false)
             }
-            _ => false,
+            _ => Ok(false),
         }
     }
 

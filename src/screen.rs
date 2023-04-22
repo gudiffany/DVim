@@ -3,6 +3,7 @@ use std::{
     env,
     io::{stdout, Stdout, Write},
 };
+use diffany::*;
 pub struct Screen {
     stdout: Stdout,
     width: u16,
@@ -55,5 +56,10 @@ impl Screen {
     }
     pub fn cursor_position(&self) -> Result<(u16, u16)> {
         cursor::position()
+    }
+
+    pub fn move_to(&mut self, pos:Position)-> Result<()>{
+            self.stdout.queue(cursor::MoveTo(pos.x,pos.y))?;
+            Ok(())
     }
 }
