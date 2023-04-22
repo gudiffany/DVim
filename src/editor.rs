@@ -16,7 +16,7 @@ impl Editor {
         Ok(Self {
             screen: Screen::new()?,
             keyboard: Keyboard {},
-            cursor: Position {x:0 , y:0},
+            cursor: Position::default(),
         })
     }
     pub fn start(&mut self) -> Result<()> {
@@ -34,22 +34,32 @@ impl Editor {
         terminal::disable_raw_mode()
     }
     pub fn process_key(&mut self) -> Result<bool> {
-        let c = self.keyboard.read_key();
-
+        if let Ok(c) = self.keyboard.read_key(){
         match c {
-            Ok(KeyEvent {
+            KeyEvent {
                 code: KeyCode::Char('q'),
                 modifiers: KeyModifiers::CONTROL,
-                kind: _,
-                state: _,
-            }) => Ok(true),
-            Err(EditorResult::KeyRradFailed) => {
-                self.die("unable open the keyboard !");
+                kind,
+                state,
+            }=> Ok(true),
+            
+            KeyEvent {  code:KeyCode::Char(key), modifiers, kind, state }=>{
+
+                match key {
+                    'w' | 'a' | 's' | 'd' => self.move_cursor(key),
+                    _=>{}
+                }
+        
                 Ok(false)
+            
             }
-            _ => Ok(false),
+            _ => Ok(false)
         }
+    }else {
+        self.die("aaa");
+        Ok(false)
     }
+}
 
     pub fn refresh_screen(&mut self) -> Result<()> {
         self.screen.clear_screen()?;
@@ -61,5 +71,17 @@ impl Editor {
         let _ = terminal::disable_raw_mode();
         eprintln!("{} : {}", message.into(), errno());
         std::process::exit(1);
+    }
+
+    fn move_cursor(&mut self, key :char){
+        match key {
+            'a' => {
+                self.cursor.x=self.cursor.x.saturating_sub(1);
+            }
+            'd' => self.cursor.x += 1,
+            'w' => {self.cursor.y=self.cursor.y.saturating_sub(1);},
+            's' => self.cursor.y += 1,
+            _ => self.die("gg")
+        }
     }
 }
