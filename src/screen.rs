@@ -24,9 +24,17 @@ impl Screen {
             if raw == self.hight / 3 {
                 let mut welcome = format!("diffany --version {VERSION}");
                 welcome.truncate(self.width as usize);
-                self.stdout
-                    .queue(cursor::MoveTo(0, raw))?
-                    .queue(Print(welcome))?;
+                if welcome.len() < self.width as usize{
+                    let leftmost = ((self.width as usize- welcome.len()) / 2) as u16;
+                    self.stdout.queue(cursor::MoveTo(0,raw))?
+                        .queue(Print("~".to_string()))?
+                        .queue(cursor::MoveTo(leftmost,raw))?
+                        .queue(Print(welcome))?;
+                }else{
+                        self.stdout
+                            .queue(cursor::MoveTo(0,raw))?
+                            .queue(Print(welcome))?;
+                }
             } else {
                 self.stdout
                     .queue(cursor::MoveTo(0, raw))?

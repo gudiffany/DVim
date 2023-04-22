@@ -28,8 +28,7 @@ impl Editor {
                 break;
             }
         }
-        terminal::disable_raw_mode()?;
-        Ok(())
+        terminal::disable_raw_mode()
     }
     pub fn process_key(&mut self) -> bool {
         let c = self.keyboard.read_key();
@@ -51,8 +50,7 @@ impl Editor {
 
     pub fn refresh_screen(&mut self) -> Result<()> {
         self.screen.clear_screen()?;
-        self.screen.draw_rows()?;
-        Ok(())
+        self.screen.draw_rows()
     }
 
     pub fn die<S: Into<String>>(&mut self, message: S) {
