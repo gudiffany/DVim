@@ -1,9 +1,9 @@
-use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
-use crossterm::{terminal, Result};
-use errno::errno;
-use diffany::*;
 use crate::keyboard::*;
 use crate::screen::*;
+use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+use crossterm::{terminal, Result};
+use diffany::*;
+use errno::errno;
 
 pub struct Editor {
     screen: Screen,
@@ -34,32 +34,49 @@ impl Editor {
         terminal::disable_raw_mode()
     }
     pub fn process_key(&mut self) -> Result<bool> {
-        if let Ok(c) = self.keyboard.read_key(){
-        match c {
-            KeyEvent {
-                code: KeyCode::Char('q'),
-                modifiers: KeyModifiers::CONTROL,
-                kind,
-                state,
-            }=> Ok(true),
-            
-            KeyEvent {  code:KeyCode::Char(key), modifiers, kind, state }=>{
+        if let Ok(c) = self.keyboard.read_key() {
+            match c {
+                KeyEvent {
+                    code: KeyCode::Char('q'),
+                    modifiers: KeyModifiers::CONTROL,
+                    ..
+                } => return Ok(true),
+                KeyEvent {
+                    code: KeyCode::Up,
+                    modifiers,
+                    ..
+                } => self.move_cursor('w'),
+                KeyEvent {
+                    code: KeyCode::Left,
+                    modifiers,
+                    ..
+                } => self.move_cursor('a'),
+                KeyEvent {
+                    code: KeyCode::Down,
+                    modifiers,
+                    ..
+                } => self.move_cursor('s'),
+                KeyEvent {
+                    code: KeyCode::Right,
+                    modifiers,
+                    ..
+                } => self.move_cursor('d'),
 
-                match key {
+                KeyEvent {
+                    code: KeyCode::Char(key),
+                    modifiers,
+                    ..
+                } => match key {
                     'w' | 'a' | 's' | 'd' => self.move_cursor(key),
-                    _=>{}
-                }
-        
-                Ok(false)
-            
+                    _ => {}
+                },
+                _ => {}
             }
-            _ => Ok(false)
+        } else {
+            self.die("aaa");
         }
-    }else {
-        self.die("aaa");
         Ok(false)
     }
-}
 
     pub fn refresh_screen(&mut self) -> Result<()> {
         self.screen.clear_screen()?;
@@ -73,15 +90,17 @@ impl Editor {
         std::process::exit(1);
     }
 
-    fn move_cursor(&mut self, key :char){
+    fn move_cursor(&mut self, key: char) {
         match key {
             'a' => {
-                self.cursor.x=self.cursor.x.saturating_sub(1);
+                self.cursor.x = self.cursor.x.saturating_sub(1);
             }
             'd' => self.cursor.x += 1,
-            'w' => {self.cursor.y=self.cursor.y.saturating_sub(1);},
+            'w' => {
+                self.cursor.y = self.cursor.y.saturating_sub(1);
+            }
             's' => self.cursor.y += 1,
-            _ => self.die("gg")
+            _ => self.die("gg"),
         }
     }
 }
