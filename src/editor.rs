@@ -1,22 +1,38 @@
+use std::collections::HashMap;
+
 use crate::keyboard::*;
 use crate::screen::*;
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use crossterm::{terminal, Result};
 use diffany::*;
 use errno::errno;
+#[derive(Clone, Copy)]
+enum EditorKey {
+    ArrowUp,
+    ArrowRight,
+    ArrowLeft,
+    ArrowDown,
+}
 
 pub struct Editor {
     screen: Screen,
     keyboard: Keyboard,
     cursor: Position,
+    keymap: HashMap<char, EditorKey>,
 }
 
 impl Editor {
     pub fn new() -> Result<Self> {
+        let mut keymap = HashMap::new();
+        keymap.insert('w', EditorKey::ArrowUp);
+        keymap.insert('a', EditorKey::ArrowLeft);
+        keymap.insert('s', EditorKey::ArrowDown);
+        keymap.insert('d', EditorKey::ArrowRight);
         Ok(Self {
             screen: Screen::new()?,
             keyboard: Keyboard {},
             cursor: Position::default(),
+            keymap,
         })
     }
     pub fn start(&mut self) -> Result<()> {
@@ -43,31 +59,34 @@ impl Editor {
                 } => return Ok(true),
                 KeyEvent {
                     code: KeyCode::Up, ..
-                } => self.move_cursor('w'),
+                } => self.move_cursor(EditorKey::ArrowUp),
                 KeyEvent {
                     code: KeyCode::Left,
                     ..
-                } => self.move_cursor('a'),
+                } => self.move_cursor(EditorKey::ArrowLeft),
                 KeyEvent {
                     code: KeyCode::Down,
                     ..
-                } => self.move_cursor('s'),
+                } => self.move_cursor(EditorKey::ArrowDown),
                 KeyEvent {
                     code: KeyCode::Right,
                     ..
-                } => self.move_cursor('d'),
+                } => self.move_cursor(EditorKey::ArrowRight),
 
                 KeyEvent {
                     code: KeyCode::Char(key),
                     ..
                 } => match key {
-                    'w' | 'a' | 's' | 'd' => self.move_cursor(key),
+                    'w' | 'a' | 's' | 'd' => {
+                        let c = *self.keymap.get(&key).unwrap();
+                        self.move_cursor(c);
+                    }
                     _ => {}
                 },
                 _ => {}
             }
         } else {
-            self.die("aaa");
+            self.die("a error");
         }
         Ok(false)
     }
@@ -84,16 +103,17 @@ impl Editor {
         std::process::exit(1);
     }
 
-    fn move_cursor(&mut self, key: char) {
+    fn move_cursor(&mut self, key: EditorKey) {
+        use EditorKey::*;
         match key {
-            'a' => {
+            ArrowLeft => {
                 self.cursor.x = self.cursor.x.saturating_sub(1);
             }
-            'd' => self.cursor.x += 1,
-            'w' => {
+            ArrowRight => self.cursor.x += 1,
+            ArrowUp => {
                 self.cursor.y = self.cursor.y.saturating_sub(1);
             }
-            's' => self.cursor.y += 1,
+            ArrowDown => self.cursor.y += 1,
             _ => self.die("gg"),
         }
     }
