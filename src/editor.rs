@@ -42,29 +42,23 @@ impl Editor {
                     ..
                 } => return Ok(true),
                 KeyEvent {
-                    code: KeyCode::Up,
-                    modifiers,
-                    ..
+                    code: KeyCode::Up, ..
                 } => self.move_cursor('w'),
                 KeyEvent {
                     code: KeyCode::Left,
-                    modifiers,
                     ..
                 } => self.move_cursor('a'),
                 KeyEvent {
                     code: KeyCode::Down,
-                    modifiers,
                     ..
                 } => self.move_cursor('s'),
                 KeyEvent {
                     code: KeyCode::Right,
-                    modifiers,
                     ..
                 } => self.move_cursor('d'),
 
                 KeyEvent {
                     code: KeyCode::Char(key),
-                    modifiers,
                     ..
                 } => match key {
                     'w' | 'a' | 's' | 'd' => self.move_cursor(key),
