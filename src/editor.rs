@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use crate::keyboard::*;
 use crate::screen::*;
+use crossterm::event::MediaKeyCode;
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use crossterm::{terminal, Result};
 use diffany::*;
@@ -12,6 +13,8 @@ enum EditorKey {
     ArrowRight,
     ArrowLeft,
     ArrowDown,
+    Pageup,
+    PageDown,
 }
 
 pub struct Editor {
@@ -58,28 +61,29 @@ impl Editor {
                     ..
                 } => return Ok(true),
                 KeyEvent {
-                    code: KeyCode::Up, ..
-                } => self.move_cursor(EditorKey::ArrowUp),
-                KeyEvent {
-                    code: KeyCode::Left,
-                    ..
-                } => self.move_cursor(EditorKey::ArrowLeft),
-                KeyEvent {
-                    code: KeyCode::Down,
-                    ..
-                } => self.move_cursor(EditorKey::ArrowDown),
-                KeyEvent {
-                    code: KeyCode::Right,
-                    ..
-                } => self.move_cursor(EditorKey::ArrowRight),
-
-                KeyEvent {
                     code: KeyCode::Char(key),
                     ..
                 } => match key {
                     'w' | 'a' | 's' | 'd' => {
                         let c = *self.keymap.get(&key).unwrap();
                         self.move_cursor(c);
+                    }
+                    _ => {}
+                },
+                KeyEvent { code, .. } => match code {
+                    KeyCode::Up => self.move_cursor(EditorKey::ArrowUp),
+                    KeyCode::Down => self.move_cursor(EditorKey::ArrowDown),
+                    KeyCode::Right => self.move_cursor(EditorKey::ArrowRight),
+                    KeyCode::Left => self.move_cursor(EditorKey::ArrowLeft),
+                    KeyCode::PageDown | KeyCode::PageUp => {
+                        let bounds = self.screen.bound();
+                        for _ in 0..bounds.y {
+                            self.move_cursor(if code == KeyCode::PageUp {
+                                EditorKey::ArrowUp
+                            } else {
+                                EditorKey::ArrowDown
+                            })
+                        }
                     }
                     _ => {}
                 },
@@ -105,16 +109,18 @@ impl Editor {
 
     fn move_cursor(&mut self, key: EditorKey) {
         use EditorKey::*;
+
+        let bounds = self.screen.bound();
         match key {
             ArrowLeft => {
                 self.cursor.x = self.cursor.x.saturating_sub(1);
             }
-            ArrowRight => self.cursor.x += 1,
+            ArrowRight if self.cursor.x <= bounds.x => self.cursor.x += 1,
             ArrowUp => {
                 self.cursor.y = self.cursor.y.saturating_sub(1);
             }
-            ArrowDown => self.cursor.y += 1,
-            _ => self.die("gg"),
+            ArrowDown if self.cursor.y <= bounds.y => self.cursor.y += 1,
+            _ => {}
         }
     }
 }
