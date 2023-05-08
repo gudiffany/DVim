@@ -30,7 +30,6 @@ impl Editor {
             .next()
             .unwrap()
             .to_string();
-        let _a = "tets";
 
         let mut keymap = HashMap::new();
         keymap.insert('w', EditorKey::Up);
