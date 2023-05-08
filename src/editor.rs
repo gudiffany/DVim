@@ -1,20 +1,17 @@
-use std::collections::HashMap;
-
 use crate::keyboard::*;
 use crate::screen::*;
-use crossterm::event::MediaKeyCode;
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use crossterm::{terminal, Result};
 use diffany::*;
 use errno::errno;
+use std::collections::HashMap;
+use std::path::Path;
 #[derive(Clone, Copy)]
 enum EditorKey {
     Up,
     Right,
     Left,
     Down,
-    Pageup,
-    PageDown,
 }
 
 pub struct Editor {
@@ -22,10 +19,19 @@ pub struct Editor {
     keyboard: Keyboard,
     cursor: Position,
     keymap: HashMap<char, EditorKey>,
+    rows: Vec<String>,
 }
 
 impl Editor {
-    pub fn new() -> Result<Self> {
+    pub fn new<P: AsRef<Path>>(filename: P) -> Result<Self> {
+        let file_line = std::fs::read_to_string(filename)
+            .expect("unable to open file")
+            .split('\n')
+            .next()
+            .unwrap()
+            .to_string();
+        let _a = "tets";
+
         let mut keymap = HashMap::new();
         keymap.insert('w', EditorKey::Up);
         keymap.insert('a', EditorKey::Left);
@@ -36,6 +42,7 @@ impl Editor {
             keyboard: Keyboard {},
             cursor: Position::default(),
             keymap,
+            rows: vec![file_line],
         })
     }
     pub fn start(&mut self) -> Result<()> {
@@ -65,7 +72,7 @@ impl Editor {
                     ..
                 } => match key {
                     'w' | 'a' | 's' | 'd' => {
-                        let mut c = *self.keymap.get(&key).unwrap();
+                        let c = *self.keymap.get(&key).unwrap();
                         self.move_cursor(c);
                     }
                     _ => {}
@@ -89,7 +96,6 @@ impl Editor {
                     }
                     _ => {}
                 },
-                _ => {}
             }
         } else {
             self.die("a error");
@@ -99,7 +105,7 @@ impl Editor {
 
     pub fn refresh_screen(&mut self) -> Result<()> {
         self.screen.clear_screen()?;
-        self.screen.draw_rows()
+        self.screen.draw_rows(&self.rows)
     }
 
     pub fn die<S: Into<String>>(&mut self, message: S) {

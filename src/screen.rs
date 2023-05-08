@@ -19,31 +19,37 @@ impl Screen {
             stdout: stdout(),
         })
     }
-    pub fn draw_rows(&mut self) -> Result<()> {
+    pub fn draw_rows(&mut self, rows: &[String]) -> Result<()> {
         const VERSION: &str = env!("CARGO_PKG_VERSION");
         for raw in 0..self.hight {
-            if raw == self.hight / 3 {
-                let mut welcome = format!("diffany --version {VERSION}");
-                welcome.truncate(self.width as usize);
-                if welcome.len() < self.width as usize {
-                    let leftmost = ((self.width as usize - welcome.len()) / 2) as u16;
-                    self.stdout
-                        .queue(cursor::MoveTo(0, raw))?
-                        .queue(Print("~".to_string()))?
-                        .queue(cursor::MoveTo(leftmost, raw))?
-                        .queue(Print(welcome))?;
+            if raw >= rows.len() as u16 {
+                if raw == self.hight / 3 {
+                    let mut welcome = format!("diffany --version {VERSION}");
+                    welcome.truncate(self.width as usize);
+                    if welcome.len() < self.width as usize {
+                        let leftmost = ((self.width as usize - welcome.len()) / 2) as u16;
+                        self.stdout
+                            .queue(cursor::MoveTo(0, raw))?
+                            .queue(Print("~".to_string()))?
+                            .queue(cursor::MoveTo(leftmost, raw))?
+                            .queue(Print(welcome))?;
+                    } else {
+                        self.stdout
+                            .queue(cursor::MoveTo(0, raw))?
+                            .queue(Print(welcome))?;
+                    }
                 } else {
                     self.stdout
                         .queue(cursor::MoveTo(0, raw))?
-                        .queue(Print(welcome))?;
+                        .queue(Print("~".to_string()))?;
                 }
             } else {
+                let len = rows[0].len().min(self.width as usize);
                 self.stdout
                     .queue(cursor::MoveTo(0, raw))?
-                    .queue(Print("~".to_string()))?;
+                    .queue(Print(rows[0][0..len].to_string()))?;
             }
         }
-        self.stdout.queue(cursor::MoveTo(1, 0))?;
         Ok(())
     }
     pub fn clear_screen(&mut self) -> Result<()> {
