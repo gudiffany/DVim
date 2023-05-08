@@ -71,6 +71,8 @@ impl Editor {
                     _ => {}
                 },
                 KeyEvent { code, .. } => match code {
+                    KeyCode::Home => self.cursor.x = 0,
+                    KeyCode::End => self.cursor.x = self.screen.bound().x - 1,
                     KeyCode::Up => self.move_cursor(EditorKey::ArrowUp),
                     KeyCode::Down => self.move_cursor(EditorKey::ArrowDown),
                     KeyCode::Right => self.move_cursor(EditorKey::ArrowRight),
