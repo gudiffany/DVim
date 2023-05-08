@@ -27,22 +27,20 @@ impl Editor {
         let file_line = std::fs::read_to_string(filename)
             .expect("unable to open file")
             .split('\n')
-            .next()
-            .unwrap()
-            .to_string();
-        Editor::build(file_line)
+            .map(|x| x.to_string())
+            .collect::<Vec<String>>();
+        Editor::build(&file_line)
     }
     pub fn new() -> Result<Self> {
-        Editor::build("")
+        Editor::build(&[])
     }
 
-    pub fn build<T: Into<String>>(data: T) -> Result<Self> {
+    pub fn build(data: &[String]) -> Result<Self> {
         let mut keymap = HashMap::new();
         keymap.insert('w', EditorKey::Up);
         keymap.insert('a', EditorKey::Left);
         keymap.insert('s', EditorKey::Down);
         keymap.insert('d', EditorKey::Right);
-        let data = data.into();
         Ok(Self {
             screen: Screen::new()?,
             keyboard: Keyboard {},
@@ -51,7 +49,7 @@ impl Editor {
             rows: if data.is_empty() {
                 Vec::new()
             } else {
-                vec![data]
+                Vec::from(data)
             },
         })
     }
