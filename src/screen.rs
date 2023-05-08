@@ -23,7 +23,7 @@ impl Screen {
         const VERSION: &str = env!("CARGO_PKG_VERSION");
         for raw in 0..self.hight {
             if raw >= rows.len() as u16 {
-                if raw == self.hight / 3 {
+                if rows.is_empty() && raw == self.hight / 3 {
                     let mut welcome = format!("diffany --version {VERSION}");
                     welcome.truncate(self.width as usize);
                     if welcome.len() < self.width as usize {
