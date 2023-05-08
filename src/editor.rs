@@ -9,10 +9,10 @@ use diffany::*;
 use errno::errno;
 #[derive(Clone, Copy)]
 enum EditorKey {
-    ArrowUp,
-    ArrowRight,
-    ArrowLeft,
-    ArrowDown,
+    Up,
+    Right,
+    Left,
+    Down,
     Pageup,
     PageDown,
 }
@@ -27,10 +27,10 @@ pub struct Editor {
 impl Editor {
     pub fn new() -> Result<Self> {
         let mut keymap = HashMap::new();
-        keymap.insert('w', EditorKey::ArrowUp);
-        keymap.insert('a', EditorKey::ArrowLeft);
-        keymap.insert('s', EditorKey::ArrowDown);
-        keymap.insert('d', EditorKey::ArrowRight);
+        keymap.insert('w', EditorKey::Up);
+        keymap.insert('a', EditorKey::Left);
+        keymap.insert('s', EditorKey::Down);
+        keymap.insert('d', EditorKey::Right);
         Ok(Self {
             screen: Screen::new()?,
             keyboard: Keyboard {},
@@ -65,7 +65,7 @@ impl Editor {
                     ..
                 } => match key {
                     'w' | 'a' | 's' | 'd' => {
-                        let c = *self.keymap.get(&key).unwrap();
+                        let mut c = *self.keymap.get(&key).unwrap();
                         self.move_cursor(c);
                     }
                     _ => {}
@@ -73,17 +73,17 @@ impl Editor {
                 KeyEvent { code, .. } => match code {
                     KeyCode::Home => self.cursor.x = 0,
                     KeyCode::End => self.cursor.x = self.screen.bound().x - 1,
-                    KeyCode::Up => self.move_cursor(EditorKey::ArrowUp),
-                    KeyCode::Down => self.move_cursor(EditorKey::ArrowDown),
-                    KeyCode::Right => self.move_cursor(EditorKey::ArrowRight),
-                    KeyCode::Left => self.move_cursor(EditorKey::ArrowLeft),
+                    KeyCode::Up => self.move_cursor(EditorKey::Up),
+                    KeyCode::Down => self.move_cursor(EditorKey::Down),
+                    KeyCode::Right => self.move_cursor(EditorKey::Right),
+                    KeyCode::Left => self.move_cursor(EditorKey::Left),
                     KeyCode::PageDown | KeyCode::PageUp => {
                         let bounds = self.screen.bound();
                         for _ in 0..bounds.y {
                             self.move_cursor(if code == KeyCode::PageUp {
-                                EditorKey::ArrowUp
+                                EditorKey::Up
                             } else {
-                                EditorKey::ArrowDown
+                                EditorKey::Down
                             })
                         }
                     }
@@ -114,14 +114,14 @@ impl Editor {
 
         let bounds = self.screen.bound();
         match key {
-            ArrowLeft => {
+            Left => {
                 self.cursor.x = self.cursor.x.saturating_sub(1);
             }
-            ArrowRight if self.cursor.x <= bounds.x => self.cursor.x += 1,
-            ArrowUp => {
+            Right if self.cursor.x <= bounds.x => self.cursor.x += 1,
+            Up => {
                 self.cursor.y = self.cursor.y.saturating_sub(1);
             }
-            ArrowDown if self.cursor.y <= bounds.y => self.cursor.y += 1,
+            Down if self.cursor.y <= bounds.y => self.cursor.y += 1,
             _ => {}
         }
     }
