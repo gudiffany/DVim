@@ -19,7 +19,7 @@ pub struct Editor {
     keyboard: Keyboard,
     cursor: Position,
     keymap: HashMap<char, EditorKey>,
-    rows: Vec<String>,
+    rows: Vec<Raw>,
     rowsoff: u16,
     coloff: u16,
 }
@@ -51,7 +51,12 @@ impl Editor {
             rows: if data.is_empty() {
                 Vec::new()
             } else {
-                Vec::from(data)
+                let v = Vec::from(data);
+                let mut rows = Vec::new();
+                for raw in v {
+                    rows.push(Raw::new(raw))
+                }
+                rows
             },
             rowsoff: 0,
             coloff: 0,
@@ -132,19 +137,24 @@ impl Editor {
     fn move_cursor(&mut self, key: EditorKey) {
         use EditorKey::*;
 
-        let row_idx = if self.cursor.y as usize >= self.rows.len() {
-            None
-        } else {
-            Some(self.cursor.y as usize)
-        };
         match key {
             Left => {
-                self.cursor.x = self.cursor.x.saturating_sub(1);
+                if self.cursor.x != 0 {
+                    self.cursor.x -= 1;
+                } else if self.cursor.y > 0 {
+                    self.cursor.y -= 1;
+                    self.cursor.x = self.rows[self.cursor.raw()].len() as u16;
+                }
             }
             Right => {
-                if let Some(idx) = row_idx {
-                    if (self.rows[idx].len() as u16) > self.cursor.x {
+                if (self.cursor.y as usize) < self.rows.len() {
+                    let idx = self.cursor.raw();
+
+                    if self.cursor.left_off(self.rows[idx].len()) {
                         self.cursor.x += 1;
+                    } else if self.cursor.above(self.rows.len()) {
+                        self.cursor.y += 1;
+                        self.cursor.x = 0;
                     }
                 }
             }

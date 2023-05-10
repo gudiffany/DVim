@@ -4,11 +4,53 @@ use std::{
     env,
     io::{stdout, Stdout, Write},
 };
+
+const TAB_STOP: usize = 8;
 pub struct Screen {
     stdout: Stdout,
     width: u16,
     hight: u16,
 }
+
+pub struct Raw {
+    chars: String,
+    render: String,
+}
+
+impl Raw {
+    pub fn new(raw: String) -> Self {
+        let mut render = String::new();
+        let mut idx = 0;
+        for c in raw.chars() {
+            match c {
+                '\t' => {
+                    render.push(' ');
+                    idx += 1;
+                    while idx % TAB_STOP != 0 {
+                        render.push(' ');
+                        idx += 1;
+                    }
+                }
+                _ => {
+                    render.push(c);
+                    idx += 1;
+                }
+            }
+        }
+        Self {
+            chars: raw.clone(),
+            render,
+        }
+    }
+    pub fn render_len(&self) -> usize {
+        self.render.len()
+    }
+
+    pub fn len(&self) -> usize {
+        self.chars.len()
+    }
+}
+
 impl Screen {
     pub fn new() -> Result<Self> {
         let (conlumns, rows) = crossterm::terminal::size()?;
@@ -19,7 +61,7 @@ impl Screen {
             stdout: stdout(),
         })
     }
-    pub fn draw_rows(&mut self, rows: &[String], rowsoff: u16, coloff: u16) -> Result<()> {
+    pub fn draw_rows(&mut self, rows: &[Raw], rowsoff: u16, coloff: u16) -> Result<()> {
         const VERSION: &str = env!("CARGO_PKG_VERSION");
         for raw in 0..self.hight {
             let filerow = (raw + rowsoff) as usize;
@@ -45,7 +87,7 @@ impl Screen {
                         .queue(Print("~".to_string()))?;
                 }
             } else {
-                let mut len = rows[filerow].len();
+                let mut len = rows[filerow].render_len();
                 if len < coloff as usize {
                     continue;
                 }
@@ -59,7 +101,7 @@ impl Screen {
                     };
                 self.stdout
                     .queue(cursor::MoveTo(0, raw))?
-                    .queue(Print(rows[filerow][start..end].to_string()))?;
+                    .queue(Print(rows[filerow].render[start..end].to_string()))?;
             }
         }
         Ok(())
