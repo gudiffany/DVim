@@ -20,6 +20,8 @@ pub struct Editor {
     cursor: Position,
     keymap: HashMap<char, EditorKey>,
     rows: Vec<String>,
+    rowsoff: u16,
+    coloff: u16,
 }
 
 impl Editor {
@@ -27,7 +29,7 @@ impl Editor {
         let file_line = std::fs::read_to_string(filename)
             .expect("unable to open file")
             .split('\n')
-            .map(|x| x.to_string())
+            .map(|x| x.into())
             .collect::<Vec<String>>();
         Editor::build(&file_line)
     }
@@ -51,6 +53,8 @@ impl Editor {
             } else {
                 Vec::from(data)
             },
+            rowsoff: 0,
+            coloff: 0,
         })
     }
     pub fn start(&mut self) -> Result<()> {
@@ -59,7 +63,7 @@ impl Editor {
             if self.refresh_screen().is_err() {
                 self.die("unable to refresh screen");
             }
-            self.screen.move_to(self.cursor)?;
+            self.screen.move_to(&self.cursor, self.rowsoff, self.coloff)?;
             self.screen.flush()?;
             if self.process_key()? {
                 break;
@@ -112,8 +116,9 @@ impl Editor {
     }
 
     pub fn refresh_screen(&mut self) -> Result<()> {
+        self.scroll();
         self.screen.clear_screen()?;
-        self.screen.draw_rows(&self.rows)
+        self.screen.draw_rows(&self.rows, self.rowsoff, self.coloff)
     }
 
     pub fn die<S: Into<String>>(&mut self, message: S) {
@@ -131,12 +136,28 @@ impl Editor {
             Left => {
                 self.cursor.x = self.cursor.x.saturating_sub(1);
             }
-            Right if self.cursor.x <= bounds.x => self.cursor.x += 1,
+            Right => self.cursor.x += 1,
             Up => {
                 self.cursor.y = self.cursor.y.saturating_sub(1);
             }
-            Down if self.cursor.y <= bounds.y => self.cursor.y += 1,
+            Down if self.cursor.y < (self.rows.len()) as u16 => self.cursor.y += 1,
             _ => {}
+        }
+    }
+
+    fn scroll(&mut self) {
+        let bounds = self.screen.bound();
+        if (self.cursor.y) < self.rowsoff {
+            self.rowsoff = self.cursor.y;
+        }
+        if (self.cursor.y) >= (self.rowsoff + (bounds.y)) {
+            self.rowsoff = self.cursor.y - bounds.y + 1;
+        }
+        if self.cursor.x < self.coloff {
+            self.coloff = self.cursor.x;
+        }
+        if (self.cursor.x) >= (self.coloff + (bounds.x)) {
+            self.coloff = self.cursor.x - bounds.x + 1;
         }
     }
 }

@@ -19,10 +19,11 @@ impl Screen {
             stdout: stdout(),
         })
     }
-    pub fn draw_rows(&mut self, rows: &[String]) -> Result<()> {
+    pub fn draw_rows(&mut self, rows: &[String], rowsoff: u16, coloff: u16) -> Result<()> {
         const VERSION: &str = env!("CARGO_PKG_VERSION");
         for raw in 0..self.hight {
-            if raw >= rows.len() as u16 {
+            let filerow = (raw + rowsoff) as usize;
+            if filerow >= rows.len() {
                 if rows.is_empty() && raw == self.hight / 3 {
                     let mut welcome = format!("diffany --version {VERSION}");
                     welcome.truncate(self.width as usize);
@@ -44,10 +45,21 @@ impl Screen {
                         .queue(Print("~".to_string()))?;
                 }
             } else {
-                let len = rows[0].len().min(self.width as usize);
+                let mut len = rows[filerow].len();
+                if len < coloff as usize {
+                    continue;
+                }
+                len -= coloff as usize;
+                let start = coloff as usize;
+                let end = start
+                    + if len >= self.width as usize {
+                        self.width as usize
+                    } else {
+                        len
+                    };
                 self.stdout
                     .queue(cursor::MoveTo(0, raw))?
-                    .queue(Print(rows[0][0..len].to_string()))?;
+                    .queue(Print(rows[filerow][start..end].to_string()))?;
             }
         }
         Ok(())
@@ -65,8 +77,9 @@ impl Screen {
     //     cursor::position()
     // }
 
-    pub fn move_to(&mut self, pos: Position) -> Result<()> {
-        self.stdout.queue(cursor::MoveTo(pos.x, pos.y))?;
+    pub fn move_to(&mut self, pos: &Position, rowsoff: u16, coloff: u16) -> Result<()> {
+        self.stdout
+            .queue(cursor::MoveTo(pos.x - coloff, pos.y - rowsoff))?;
         Ok(())
     }
 
