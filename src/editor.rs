@@ -63,7 +63,8 @@ impl Editor {
             if self.refresh_screen().is_err() {
                 self.die("unable to refresh screen");
             }
-            self.screen.move_to(&self.cursor, self.rowsoff, self.coloff)?;
+            self.screen
+                .move_to(&self.cursor, self.rowsoff, self.coloff)?;
             self.screen.flush()?;
             if self.process_key()? {
                 break;
@@ -131,12 +132,22 @@ impl Editor {
     fn move_cursor(&mut self, key: EditorKey) {
         use EditorKey::*;
 
-        let bounds = self.screen.bound();
+        let row_idx = if self.cursor.y as usize >= self.rows.len() {
+            None
+        } else {
+            Some(self.cursor.y as usize)
+        };
         match key {
             Left => {
                 self.cursor.x = self.cursor.x.saturating_sub(1);
             }
-            Right => self.cursor.x += 1,
+            Right => {
+                if let Some(idx) = row_idx {
+                    if (self.rows[idx].len() as u16) > self.cursor.x {
+                        self.cursor.x += 1;
+                    }
+                }
+            }
             Up => {
                 self.cursor.y = self.cursor.y.saturating_sub(1);
             }
