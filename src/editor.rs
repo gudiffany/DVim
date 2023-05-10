@@ -154,6 +154,12 @@ impl Editor {
             Down if self.cursor.y < (self.rows.len()) as u16 => self.cursor.y += 1,
             _ => {}
         }
+        let row_len = if self.cursor.y as usize >= self.rows.len() {
+            0
+        } else {
+            self.rows[self.cursor.y as usize].len() as u16
+        };
+        self.cursor.x = self.cursor.x.min(row_len);
     }
 
     fn scroll(&mut self) {
