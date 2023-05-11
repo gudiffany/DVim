@@ -49,6 +49,17 @@ impl Raw {
     pub fn len(&self) -> usize {
         self.chars.len()
     }
+
+    pub fn cx_to_rx(&self,cx:u16) -> u16 {
+        let mut rx = 0;
+        for c in self.chars.chars().take(cx as usize) {
+            if c == '\t' {
+                rx += (TAB_STOP - 1) - (rx % TAB_STOP);
+            }
+            rx += 1;
+        }
+        rx as u16
+    }
 }
 
 impl Screen {
@@ -119,9 +130,15 @@ impl Screen {
     //     cursor::position()
     // }
 
-    pub fn move_to(&mut self, pos: &Position, rowsoff: u16, coloff: u16) -> Result<()> {
+    pub fn move_to(
+        &mut self,
+        pos: &Position,
+        render_x: u16,
+        rowsoff: u16,
+        coloff: u16,
+    ) -> Result<()> {
         self.stdout
-            .queue(cursor::MoveTo(pos.x - coloff, pos.y - rowsoff))?;
+            .queue(cursor::MoveTo(render_x - coloff, pos.y - rowsoff))?;
         Ok(())
     }
 

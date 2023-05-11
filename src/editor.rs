@@ -18,6 +18,7 @@ pub struct Editor {
     screen: Screen,
     keyboard: Keyboard,
     cursor: Position,
+    render_x: u16,
     keymap: HashMap<char, EditorKey>,
     rows: Vec<Raw>,
     rowsoff: u16,
@@ -60,6 +61,7 @@ impl Editor {
             },
             rowsoff: 0,
             coloff: 0,
+            render_x: 0,
         })
     }
     pub fn start(&mut self) -> Result<()> {
@@ -69,7 +71,7 @@ impl Editor {
                 self.die("unable to refresh screen");
             }
             self.screen
-                .move_to(&self.cursor, self.rowsoff, self.coloff)?;
+                .move_to(&self.cursor, self.render_x, self.rowsoff, self.coloff)?;
             self.screen.flush()?;
             if self.process_key()? {
                 break;
@@ -164,15 +166,20 @@ impl Editor {
             Down if self.cursor.y < (self.rows.len()) as u16 => self.cursor.y += 1,
             _ => {}
         }
-        let row_len = if self.cursor.y as usize >= self.rows.len() {
-            0
-        } else {
+        let row_len = if self.cursor.above(self.rows.len()) {
             self.rows[self.cursor.y as usize].len() as u16
+        } else {
+            0
         };
         self.cursor.x = self.cursor.x.min(row_len);
     }
 
     fn scroll(&mut self) {
+        self.render_x = if self.cursor.above(self.rows.len()) {
+            self.rows[self.cursor.y as usize].cx_to_rx(self.cursor.x)
+        } else {
+            0
+        };
         let bounds = self.screen.bound();
         if (self.cursor.y) < self.rowsoff {
             self.rowsoff = self.cursor.y;
@@ -180,11 +187,11 @@ impl Editor {
         if (self.cursor.y) >= (self.rowsoff + (bounds.y)) {
             self.rowsoff = self.cursor.y - bounds.y + 1;
         }
-        if self.cursor.x < self.coloff {
-            self.coloff = self.cursor.x;
+        if self.render_x < self.coloff {
+            self.coloff = self.render_x;
         }
-        if (self.cursor.x) >= (self.coloff + (bounds.x)) {
-            self.coloff = self.cursor.x - bounds.x + 1;
+        if (self.render_x) >= (self.coloff + (bounds.x)) {
+            self.coloff = self.render_x - bounds.x + 1;
         }
     }
 }
