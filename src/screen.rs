@@ -7,7 +7,8 @@ use crossterm::{
 use diffany::*;
 use std::{
     env,
-    fmt::format,
+    fmt::Display,
+    // fmt::format,
     io::{stdout, Stdout, Write},
 };
 
@@ -104,7 +105,12 @@ impl Screen {
         }
     }
 
-    pub fn draw_bar<T: Into<String>>(&mut self, left: T, right: T) -> Result<()> {
+    pub fn draw_bar<T: Into<String>,U: Into<String>>(
+        &mut self,
+        left: T,
+        right: U,
+        help: impl Display,
+    ) -> Result<()> {
         let left = left.into();
         let right = right.into();
         let left_width = left.len();
@@ -130,6 +136,8 @@ impl Screen {
             .queue(cursor::MoveTo(0, self.hight))?
             .queue(SetColors(Colors::new(Color::Black, Color::White)))?
             .queue(Print(format!("{status}{rstatus}")))?
+            .queue(cursor::MoveTo(0, self.hight + 1))?
+            .queue(Print(format!("{help:0$}", srceen_width)))?
             .queue(ResetColor)?;
         Ok(())
     }

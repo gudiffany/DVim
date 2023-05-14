@@ -8,6 +8,7 @@ use errno::errno;
 use std::collections::HashMap;
 use std::path::Path;
 use std::time::Duration;
+use std::time::Instant;
 #[derive(Clone, Copy)]
 enum EditorKey {
     Up,
@@ -20,7 +21,7 @@ pub struct Editor {
     filename: String,
     screen: Screen,
     status_msg: String,
-    status_time: Duration,
+    status_time: Instant,
     keyboard: Keyboard,
     cursor: Position,
     render_x: u16,
@@ -53,8 +54,8 @@ impl Editor {
         Ok(Self {
             screen: Screen::new()?,
             keyboard: Keyboard {},
-            status_msg: String::new(),
-            status_time: Duration::new(0, 0),
+            status_msg: String::from("HELP: Ctrl+Q = quit"),
+            status_time: Instant::now(),
             cursor: Position::default(),
             keymap,
             rows: if data.is_empty() {
@@ -147,9 +148,15 @@ impl Editor {
         self.screen.clear_screen()?;
         self.screen
             .draw_rows(&self.rows, self.rowsoff, self.coloff)?;
+
+        if !self.status_msg.is_empty() && self.status_time.elapsed() > Duration::from_secs(5) {
+            self.status_msg.clear();
+        }
+
         self.screen.draw_bar(
             format!("{:20} - {} lines", self.filename, self.rows.len()),
             format!("{}/{}", self.cursor.x, self.cursor.y),
+            &self.status_msg,
         )
     }
 
@@ -222,4 +229,9 @@ impl Editor {
             0
         }
     }
+
+    // pub fn set_status_msg<T: Into<String>>(&mut self, message: T) {
+    //     self.status_time = Instant::now();
+    //     self.status_msg = message.into();
+    // }
 }
