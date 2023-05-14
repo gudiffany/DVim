@@ -1,7 +1,13 @@
-use crossterm::{cursor, style::Print, terminal, QueueableCommand, Result};
+use crate::raw::*;
+use crossterm::{
+    cursor,
+    style::{Color, Colors, Print, ResetColor, SetColors},
+    terminal, QueueableCommand, Result,
+};
 use diffany::*;
 use std::{
     env,
+    fmt::format,
     io::{stdout, Stdout, Write},
 };
 
@@ -11,15 +17,13 @@ pub struct Screen {
     hight: u16,
 }
 
-
-
 impl Screen {
     pub fn new() -> Result<Self> {
         let (conlumns, rows) = crossterm::terminal::size()?;
 
         Ok(Self {
             width: conlumns,
-            hight: rows,
+            hight: rows - 1,
             stdout: stdout(),
         })
     }
@@ -98,5 +102,35 @@ impl Screen {
             x: self.width,
             y: self.hight,
         }
+    }
+
+    pub fn draw_bar<T: Into<String>>(&mut self, left: T, right: T) -> Result<()> {
+        let left = left.into();
+        let right = right.into();
+        let left_width = left.len();
+        let right_width = right.len();
+        let srceen_width = self.width as usize;
+
+        let status = format!("{left:0$}", left_width.min(srceen_width));
+        let mut rstatus = String::new();
+        if status.len() < srceen_width - right_width {
+            let mut len = status.len();
+            while len < srceen_width {
+                if srceen_width - len == right_width {
+                    rstatus.push_str(right.as_str());
+                    break;
+                } else {
+                    rstatus.push(' ');
+                    len += 1;
+                }
+            }
+        }
+
+        self.stdout
+            .queue(cursor::MoveTo(0, self.hight))?
+            .queue(SetColors(Colors::new(Color::Black, Color::White)))?
+            .queue(Print(format!("{status}{rstatus}")))?
+            .queue(ResetColor)?;
+        Ok(())
     }
 }

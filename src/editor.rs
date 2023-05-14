@@ -1,4 +1,5 @@
 use crate::keyboard::*;
+use crate::raw::*;
 use crate::screen::*;
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use crossterm::{terminal, Result};
@@ -15,6 +16,7 @@ enum EditorKey {
 }
 
 pub struct Editor {
+    filename: String,
     screen: Screen,
     keyboard: Keyboard,
     cursor: Position,
@@ -26,19 +28,20 @@ pub struct Editor {
 }
 
 impl Editor {
-    pub fn with_file<P: AsRef<Path>>(filename: P) -> Result<Self> {
+    pub fn with_file<P: AsRef<Path> + ToString>(filename: P) -> Result<Self> {
+        let fn_string = filename.to_string();
         let file_line = std::fs::read_to_string(filename)
             .expect("unable to open file")
             .split('\n')
             .map(|x| x.into())
             .collect::<Vec<String>>();
-        Editor::build(&file_line)
+        Editor::build(&file_line, fn_string)
     }
     pub fn new() -> Result<Self> {
-        Editor::build(&[])
+        Editor::build(&[], "")
     }
 
-    pub fn build(data: &[String]) -> Result<Self> {
+    pub fn build<T: Into<String>>(data: &[String], filename: T) -> Result<Self> {
         let mut keymap = HashMap::new();
         keymap.insert('w', EditorKey::Up);
         keymap.insert('a', EditorKey::Left);
@@ -62,6 +65,7 @@ impl Editor {
             rowsoff: 0,
             coloff: 0,
             render_x: 0,
+            filename: filename.into(),
         })
     }
     pub fn start(&mut self) -> Result<()> {
@@ -136,7 +140,12 @@ impl Editor {
     pub fn refresh_screen(&mut self) -> Result<()> {
         self.scroll();
         self.screen.clear_screen()?;
-        self.screen.draw_rows(&self.rows, self.rowsoff, self.coloff)
+        self.screen
+            .draw_rows(&self.rows, self.rowsoff, self.coloff)?;
+        self.screen.draw_bar(
+            format!("{:20} - {} lines", self.filename, self.rows.len()),
+            format!("{}/{}", self.cursor.x, self.cursor.y),
+        )
     }
 
     pub fn die<S: Into<String>>(&mut self, message: S) {

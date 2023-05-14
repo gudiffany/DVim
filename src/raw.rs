@@ -1,10 +1,8 @@
-
-
 const TAB_STOP: usize = 8;
 
 pub struct Raw {
     chars: String,
-    render: String,
+    pub render: String,
 }
 
 impl Raw {
@@ -40,7 +38,7 @@ impl Raw {
         self.chars.len()
     }
 
-    pub fn cx_to_rx(&self,cx:u16) -> u16 {
+    pub fn cx_to_rx(&self, cx: u16) -> u16 {
         let mut rx = 0;
         for c in self.chars.chars().take(cx as usize) {
             if c == '\t' {

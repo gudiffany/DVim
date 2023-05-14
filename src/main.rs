@@ -3,6 +3,7 @@ mod editor;
 use editor::Editor;
 mod keyboard;
 mod screen;
+mod raw;
 fn main() -> Result<()> {
     let mut args = std::env::args();
     let mut editor = if args.len() >= 2 {
