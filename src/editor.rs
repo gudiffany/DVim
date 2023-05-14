@@ -7,6 +7,7 @@ use diffany::*;
 use errno::errno;
 use std::collections::HashMap;
 use std::path::Path;
+use std::time::Duration;
 #[derive(Clone, Copy)]
 enum EditorKey {
     Up,
@@ -18,6 +19,8 @@ enum EditorKey {
 pub struct Editor {
     filename: String,
     screen: Screen,
+    status_msg: String,
+    status_time: Duration,
     keyboard: Keyboard,
     cursor: Position,
     render_x: u16,
@@ -50,6 +53,8 @@ impl Editor {
         Ok(Self {
             screen: Screen::new()?,
             keyboard: Keyboard {},
+            status_msg: String::new(),
+            status_time: Duration::new(0, 0),
             cursor: Position::default(),
             keymap,
             rows: if data.is_empty() {
