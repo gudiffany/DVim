@@ -105,7 +105,7 @@ impl Screen {
         }
     }
 
-    pub fn draw_bar<T: Into<String>,U: Into<String>>(
+    pub fn draw_bar<T: Into<String>, U: Into<String>>(
         &mut self,
         left: T,
         right: U,
@@ -133,11 +133,10 @@ impl Screen {
         }
 
         self.stdout
-            .queue(cursor::MoveTo(0, self.hight))?
+            .queue(cursor::MoveTo(0, self.hight+1))?
             .queue(SetColors(Colors::new(Color::Black, Color::White)))?
             .queue(Print(format!("{status}{rstatus}")))?
-            .queue(cursor::MoveTo(0, self.hight + 1))?
-            .queue(Print(format!("{help:0$}", srceen_width)))?
+            // .queue(Print(format!("{help:0$}", srceen_width)))?
             .queue(ResetColor)?;
         Ok(())
     }
