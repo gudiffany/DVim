@@ -94,6 +94,12 @@ impl Editor {
                 } => return Ok(true),
 
                 KeyEvent {
+                    code: KeyCode::Char('s'),
+                    modifiers: KeyModifiers::CONTROL,
+                    ..
+                } => self.save(),
+
+                KeyEvent {
                     code: KeyCode::Char('l'),
                     modifiers: KeyModifiers::CONTROL,
                     ..
@@ -252,6 +258,24 @@ impl Editor {
         }
         self.rows[self.cursor.y as usize].insert_char(self.cursor.x as usize, c);
         self.cursor.x += 1;
+    }
+
+    fn rows_to_string(&self) -> String {
+        let mut buf = String::new();
+        for r in &self.rows {
+            buf.push_str(r.chars.as_str());
+            buf.push('\n');
+        }
+        buf
+    }
+
+    fn save(&self) {
+        if self.filename.is_empty() {
+            return;
+        }
+
+        let buf = self.rows_to_string();
+        let _ = std::fs::write(&self.filename, &buf);
     }
 
     // pub fn set_status_msg<T: Into<String>>(&mut self, message: T) {

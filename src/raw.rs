@@ -1,7 +1,7 @@
 const TAB_STOP: usize = 8;
 
 pub struct Raw {
-    chars: String,
+    pub chars: String,
     pub render: String,
 }
 
