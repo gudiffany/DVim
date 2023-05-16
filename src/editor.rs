@@ -27,6 +27,7 @@ pub struct Editor {
     rows: Vec<Raw>,
     rowsoff: u16,
     coloff: u16,
+    dirty: usize,
 }
 
 impl Editor {
@@ -67,6 +68,7 @@ impl Editor {
             coloff: 0,
             render_x: 0,
             filename: filename.into(),
+            dirty: 0,
         })
     }
     pub fn start(&mut self) -> Result<()> {
@@ -176,7 +178,17 @@ impl Editor {
         }
 
         self.screen.draw_bar(
-            format!("{:20} - {} lines", self.filename, self.rows.len()),
+            format!(
+                "{:20} - {} lines {} {}",
+                if self.filename.is_empty() {
+                    "[No None]"
+                } else {
+                    &self.filename
+                },
+                self.rows.len(),
+                self.dirty,
+                if self.dirty > 0 { "(modified)" } else { "" }
+            ),
             format!("{}/{}", self.cursor.x, self.cursor.y),
             &self.status_msg,
         )
@@ -254,10 +266,16 @@ impl Editor {
 
     fn insert_char(&mut self, c: char) {
         if !self.cursor.above(self.rows.len()) {
-            self.rows.push(Raw::new(String::new()));
+            self.append_row(String::new());
         }
         self.rows[self.cursor.y as usize].insert_char(self.cursor.x as usize, c);
         self.cursor.x += 1;
+        self.dirty += 1;
+    }
+
+    fn append_row(&mut self, s: String) {
+        self.rows.push(Raw::new(s));
+        self.dirty += 1;
     }
 
     fn rows_to_string(&self) -> String {
@@ -269,17 +287,23 @@ impl Editor {
         buf
     }
 
-    fn save(&self) {
+    fn save(&mut self) {
         if self.filename.is_empty() {
             return;
         }
 
         let buf = self.rows_to_string();
-        let _ = std::fs::write(&self.filename, &buf);
+        let len = buf.as_bytes().len();
+        if std::fs::write(&self.filename, &buf).is_ok() {
+            self.dirty = 0;
+            self.set_status_msg(&format!("{len} bytes written to disk"));
+        } else {
+            self.set_status_msg(&format!("can't save I/O error: {}", errno()));
+        }
     }
 
-    // pub fn set_status_msg<T: Into<String>>(&mut self, message: T) {
-    //     self.status_time = Instant::now();
-    //     self.status_msg = message.into();
-    // }
+    pub fn set_status_msg<T: Into<String>>(&mut self, message: T) {
+        self.status_time = Instant::now();
+        self.status_msg = message.into();
+    }
 }
