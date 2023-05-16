@@ -133,7 +133,7 @@ impl Screen {
         }
 
         self.stdout
-            .queue(cursor::MoveTo(0, self.hight))?
+            .queue(cursor::MoveTo(0, self.hight + 1))?
             .queue(SetColors(Colors::new(Color::Black, Color::White)))?
             .queue(Print(format!("{status}{rstatus}")))?
             .queue(cursor::MoveTo(0, self.hight + 1))?

@@ -92,11 +92,38 @@ impl Editor {
                     modifiers: KeyModifiers::CONTROL,
                     ..
                 } => return Ok(true),
+
+                KeyEvent {
+                    code: KeyCode::Char('l'),
+                    modifiers: KeyModifiers::CONTROL,
+                    ..
+                }
+                | KeyEvent {
+                    code: KeyCode::Esc, ..
+                } => {}
+
+                KeyEvent {
+                    code: KeyCode::Char('h'),
+                    modifiers: KeyModifiers::CONTROL,
+                    ..
+                }
+                | KeyEvent {
+                    code: KeyCode::Backspace,
+                    ..
+                }
+                | KeyEvent {
+                    code: KeyCode::Delete,
+                    ..
+                } => {} // TODO
+
                 KeyEvent {
                     code: KeyCode::Char(key),
+                    modifiers: KeyModifiers::NONE,
                     ..
                 } => self.insert_char(key),
+
                 KeyEvent { code, .. } => match code {
+                    KeyCode::Enter => {} // TODO
                     KeyCode::Home => self.cursor.x = 0,
                     KeyCode::End => self.cursor.x = self.current_row_len(),
                     KeyCode::Up => self.move_cursor(EditorKey::Up),
