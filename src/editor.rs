@@ -5,7 +5,6 @@ use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use crossterm::{terminal, Result};
 use diffany::*;
 use errno::errno;
-use std::collections::HashMap;
 use std::path::Path;
 use std::time::Duration;
 use std::time::Instant;
@@ -25,7 +24,6 @@ pub struct Editor {
     keyboard: Keyboard,
     cursor: Position,
     render_x: u16,
-    keymap: HashMap<char, EditorKey>,
     rows: Vec<Raw>,
     rowsoff: u16,
     coloff: u16,
@@ -46,18 +44,12 @@ impl Editor {
     }
 
     pub fn build<T: Into<String>>(data: &[String], filename: T) -> Result<Self> {
-        let mut keymap = HashMap::new();
-        keymap.insert('w', EditorKey::Up);
-        keymap.insert('a', EditorKey::Left);
-        keymap.insert('s', EditorKey::Down);
-        keymap.insert('d', EditorKey::Right);
         Ok(Self {
             screen: Screen::new()?,
             keyboard: Keyboard {},
             status_msg: String::from("HELP: Ctrl+Q = quit"),
             status_time: Instant::now(),
             cursor: Position::default(),
-            keymap,
             rows: if data.is_empty() {
                 Vec::new()
             } else {
@@ -65,6 +57,9 @@ impl Editor {
                 let mut rows = Vec::new();
                 for raw in v {
                     rows.push(Raw::new(raw))
+                }
+                if rows.last().unwrap().len() == 0 {
+                    rows.pop();
                 }
                 rows
             },
@@ -100,13 +95,7 @@ impl Editor {
                 KeyEvent {
                     code: KeyCode::Char(key),
                     ..
-                } => match key {
-                    'w' | 'a' | 's' | 'd' => {
-                        let c = *self.keymap.get(&key).unwrap();
-                        self.move_cursor(c);
-                    }
-                    _ => {}
-                },
+                } => self.insert_char(key),
                 KeyEvent { code, .. } => match code {
                     KeyCode::Home => self.cursor.x = 0,
                     KeyCode::End => self.cursor.x = self.current_row_len(),
@@ -228,6 +217,14 @@ impl Editor {
         } else {
             0
         }
+    }
+
+    fn insert_char(&mut self, c: char) {
+        if !self.cursor.above(self.rows.len()) {
+            self.rows.push(Raw::new(String::new()));
+        }
+        self.rows[self.cursor.y as usize].insert_char(self.cursor.x as usize, c);
+        self.cursor.x += 1;
     }
 
     // pub fn set_status_msg<T: Into<String>>(&mut self, message: T) {
