@@ -8,6 +8,8 @@ use errno::errno;
 use std::path::Path;
 use std::time::Duration;
 use std::time::Instant;
+
+const QUIT_TIME: usize = 3;
 #[derive(Clone, Copy)]
 enum EditorKey {
     Up,
@@ -28,6 +30,7 @@ pub struct Editor {
     rowsoff: u16,
     coloff: u16,
     dirty: usize,
+    quit_time: usize,
 }
 
 impl Editor {
@@ -48,7 +51,7 @@ impl Editor {
         Ok(Self {
             screen: Screen::new()?,
             keyboard: Keyboard {},
-            status_msg: String::from("HELP: Ctrl+Q = quit"),
+            status_msg: String::from("HELP: Ctrl+q = quit  && Ctrl+s = save"),
             status_time: Instant::now(),
             cursor: Position::default(),
             rows: if data.is_empty() {
@@ -69,6 +72,7 @@ impl Editor {
             render_x: 0,
             filename: filename.into(),
             dirty: 0,
+            quit_time: QUIT_TIME,
         })
     }
     pub fn start(&mut self) -> Result<()> {
@@ -93,8 +97,18 @@ impl Editor {
                     code: KeyCode::Char('q'),
                     modifiers: KeyModifiers::CONTROL,
                     ..
-                } => return Ok(true),
-
+                } => {
+                    if self.dirty > 0 && self.quit_time > 0 {
+                        self.set_status_msg(format!(
+                            "warning!!! filename unsaved changes.Press Ctrl + q {} more time to quit",
+                            self.quit_time,
+                        ));
+                        self.quit_time -= 1;
+                        return Ok(false);
+                    } else {
+                        return Ok(true);
+                    }
+                }
                 KeyEvent {
                     code: KeyCode::Char('s'),
                     modifiers: KeyModifiers::CONTROL,
@@ -164,6 +178,7 @@ impl Editor {
         } else {
             self.die("a error");
         }
+        self.quit_time = QUIT_TIME;
         Ok(false)
     }
 
