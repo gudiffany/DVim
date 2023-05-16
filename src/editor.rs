@@ -136,7 +136,16 @@ impl Editor {
                 | KeyEvent {
                     code: KeyCode::Delete,
                     ..
-                } => {} // TODO
+                } => {
+                    if let KeyEvent {
+                        code: KeyCode::Delete,
+                        ..
+                    } = c
+                    {
+                        self.move_cursor(EditorKey::Right);
+                    }
+                    self.del_char();
+                } // TODO
 
                 KeyEvent {
                     code: KeyCode::Char(key),
@@ -288,9 +297,41 @@ impl Editor {
         self.dirty += 1;
     }
 
+    fn del_char(&mut self) {
+        if !self.cursor.above(self.rows.len()) {
+            return;
+        }
+        if self.cursor.x == 0 && self.cursor.y == 0 {
+            return;
+        }
+        let cur_row = self.cursor.y as usize;
+        if self.cursor.x > 0 {
+            if self.rows[cur_row].del_char(self.cursor.x as usize - 1) {
+                self.dirty += 1;
+                self.cursor.x -= 1;
+            }
+        } else {
+            self.cursor.x = self.rows[cur_row - 1].len() as u16;
+            if let Some(row) = self.del_row(cur_row) {
+                self.rows[cur_row - 1].append_string(&row);
+                self.cursor.y -= 1;
+                self.dirty += 1;
+            }
+        }
+    }
+
     fn append_row(&mut self, s: String) {
         self.rows.push(Raw::new(s));
         self.dirty += 1;
+    }
+
+    fn del_row(&mut self, at: usize) -> Option<String> {
+        if at >= self.rows.len() {
+            None
+        } else {
+            self.dirty += 1;
+            Some(self.rows.remove(at).chars)
+        }
     }
 
     fn rows_to_string(&self) -> String {

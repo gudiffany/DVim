@@ -37,6 +37,21 @@ impl Raw {
         self.render = Raw::render_raw(&self.chars);
     }
 
+    pub fn del_char(&mut self, at: usize) -> bool {
+        if at >= self.chars.len() {
+            false
+        } else {
+            self.chars.remove(at);
+            self.render = Raw::render_raw(&self.chars);
+            true
+        }
+    }
+
+    pub fn append_string(&mut self, s: &str) {
+        self.chars.push_str(s);
+        self.render = Raw::render_raw(&self.chars);
+    }
+
     pub fn render_raw(chars: &String) -> String {
         let mut render = String::new();
         let mut idx = 0;
