@@ -151,6 +151,10 @@ impl Editor {
                     code: KeyCode::Char(key),
                     modifiers: KeyModifiers::NONE,
                     ..
+                }|KeyEvent {
+                    code: KeyCode::Char(key),
+                    modifiers: KeyModifiers::SHIFT,
+                    ..
                 } => self.insert_char(key),
 
                 KeyEvent { code, .. } => match code {
