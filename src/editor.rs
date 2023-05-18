@@ -159,7 +159,9 @@ impl Editor {
                 } => self.insert_char(key),
 
                 KeyEvent { code, .. } => match code {
-                    KeyCode::Enter => {} // TODO
+                    KeyCode::Enter => {
+                        self.insert_newlines();
+                    } // TODO
                     KeyCode::Home => self.cursor.x = 0,
                     KeyCode::End => self.cursor.x = self.current_row_len(),
                     KeyCode::Up => self.move_cursor(EditorKey::Up),
@@ -325,12 +327,25 @@ impl Editor {
         }
     }
 
+    fn insert_newlines(&mut self) {
+        let row = self.cursor.y as usize;
+
+        if self.cursor.x == 0 {
+            self.insert_row(row, String::from(""))
+        } else {
+            let new_row = self.rows[row].split(self.cursor.x as usize);
+            self.insert_row(row, new_row);
+        }
+        self.cursor.y += 1;
+        self.cursor.x = 0;
+    }
+
     fn insert_row(&mut self, at: usize, s: String) {
         if at > self.rows.len() {
             return;
         }
 
-        self.rows.push(Raw::new(s));
+        self.rows.insert(at, Raw::new(s));
         self.dirty += 1;
     }
 

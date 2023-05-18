@@ -46,7 +46,11 @@ impl Raw {
             true
         }
     }
-
+    pub fn split(&mut self, at: usize) -> String {
+        let result = self.chars.split_off(at);
+        self.render =  Raw::render_raw(&self.chars);
+        result
+    }
     pub fn append_string(&mut self, s: &str) {
         self.chars.push_str(s);
         self.render = Raw::render_raw(&self.chars);
