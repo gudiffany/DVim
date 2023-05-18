@@ -151,7 +151,8 @@ impl Editor {
                     code: KeyCode::Char(key),
                     modifiers: KeyModifiers::NONE,
                     ..
-                }|KeyEvent {
+                }
+                | KeyEvent {
                     code: KeyCode::Char(key),
                     modifiers: KeyModifiers::SHIFT,
                     ..
@@ -294,7 +295,7 @@ impl Editor {
 
     fn insert_char(&mut self, c: char) {
         if !self.cursor.above(self.rows.len()) {
-            self.append_row(String::new());
+            self.insert_row(self.rows.len(), String::new());
         }
         self.rows[self.cursor.y as usize].insert_char(self.cursor.x as usize, c);
         self.cursor.x += 1;
@@ -324,7 +325,11 @@ impl Editor {
         }
     }
 
-    fn append_row(&mut self, s: String) {
+    fn insert_row(&mut self, at: usize, s: String) {
+        if at > self.rows.len() {
+            return;
+        }
+
         self.rows.push(Raw::new(s));
         self.dirty += 1;
     }
