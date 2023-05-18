@@ -18,10 +18,17 @@ enum EditorKey {
     Down,
 }
 
-enum Prompt_Key {
+enum PromptKey {
     Enter,
     Escape,
     Char(char),
+    Pre,
+    Next,
+}
+
+enum SearchDirection {
+    Backword,
+    Forword,
 }
 
 pub struct Editor {
@@ -37,6 +44,8 @@ pub struct Editor {
     coloff: u16,
     dirty: usize,
     quit_time: usize,
+    last_match: Option<usize>,
+    direction: SearchDirection,
 }
 
 impl Editor {
@@ -79,6 +88,8 @@ impl Editor {
             filename: filename.into(),
             dirty: 0,
             quit_time: QUIT_TIME,
+            last_match: None,
+            direction: SearchDirection::Forword,
         })
     }
     pub fn start(&mut self) -> Result<()> {
@@ -402,7 +413,7 @@ impl Editor {
     fn prompt(
         &mut self,
         prompt: &str,
-        callback: Option<fn(&mut Editor, &str, Prompt_Key)>,
+        callback: Option<fn(&mut Editor, &str, PromptKey)>,
     ) -> Option<String> {
         let mut buf = String::from("");
         loop {
@@ -410,7 +421,7 @@ impl Editor {
             let _ = self.refresh_screen();
             let _ = self.screen.flush();
             if let Ok(c) = self.keyboard.read_key() {
-                let mut prompt_key: Option<Prompt_Key> = None;
+                let mut prompt_key: Option<PromptKey> = None;
 
                 match c {
                     KeyEvent {
@@ -418,7 +429,7 @@ impl Editor {
                         ..
                     } => {
                         if let Some(callback) = callback {
-                            callback(self, &buf, Prompt_Key::Enter);
+                            callback(self, &buf, PromptKey::Enter);
                         }
                         self.set_status_msg("");
                         return Some(buf);
@@ -427,7 +438,7 @@ impl Editor {
                         code: KeyCode::Esc, ..
                     } => {
                         if let Some(callback) = callback {
-                            callback(self, &buf, Prompt_Key::Escape);
+                            callback(self, &buf, PromptKey::Escape);
                         }
                         self.set_status_msg("");
                         return None;
@@ -450,12 +461,37 @@ impl Editor {
                     }
 
                     KeyEvent {
+                        code: KeyCode::Up, ..
+                    }
+                    | KeyEvent {
+                        code: KeyCode::Left,
+                        ..
+                    } => {
+                        if let Some(callback) = callback {
+                            callback(self, &buf, PromptKey::Pre);
+                        }
+                    }
+
+                    KeyEvent {
+                        code: KeyCode::Down,
+                        ..
+                    }
+                    | KeyEvent {
+                        code: KeyCode::Right,
+                        ..
+                    } => {
+                        if let Some(callback) = callback {
+                            callback(self, &buf, PromptKey::Next);
+                        }
+                    }
+
+                    KeyEvent {
                         code: KeyCode::Char(ch),
                         modifiers: modif,
                         ..
                     } => {
                         if matches!(modif, KeyModifiers::NONE | KeyModifiers::SHIFT) {
-                            prompt_key = Some(Prompt_Key::Char(ch));
+                            prompt_key = Some(PromptKey::Char(ch));
                             buf.push(ch);
                         }
                     }
@@ -471,17 +507,64 @@ impl Editor {
     }
 
     fn find(&mut self) {
-        self.prompt("Search (ESC to cancel)", Some(Editor::find_callback));
+        let (saved_position, saved_coloff, saved_rowsoff) =
+            (self.cursor, self.coloff, self.rowsoff);
+
+        if self
+            .prompt("Search (ESC to cancel)", Some(Editor::find_callback))
+            .is_none()
+        {
+            self.cursor = saved_position;
+            self.coloff = saved_coloff;
+            self.rowsoff = saved_rowsoff;
+        }
     }
 
-    fn find_callback(&mut self, query: &str, event: Prompt_Key) {
-        if matches!(event, Prompt_Key::Enter | Prompt_Key::Escape) {
-            return;
+    fn find_callback(&mut self, query: &str, event: PromptKey) {
+        match event {
+            PromptKey::Enter | PromptKey::Escape => {
+                self.last_match = None;
+                self.direction = SearchDirection::Forword;
+            }
+            PromptKey::Next => self.direction = SearchDirection::Forword,
+            PromptKey::Pre => self.direction = SearchDirection::Backword,
+            _ => {
+                self.last_match = None;
+                self.direction = SearchDirection::Forword;
+            }
         }
-        for (i, raw) in self.rows.iter().enumerate() {
-            if let Some(m) = raw.render.match_indices(query).take(1).next() {
-                self.cursor.y = i as u16;
-                self.cursor.x = raw.rx_to_cx(m.0);
+        let mut current = if let Some(line) = self.last_match {
+            line
+        } else {
+            self.direction = SearchDirection::Forword;
+            self.rows.len()
+        };
+
+        for _ in 0..self.rows.len() {
+            match self.direction {
+                SearchDirection::Forword => {
+                    current += 1;
+                    if current >= self.rows.len() {
+                        current = 0;
+                    }
+                }
+                SearchDirection::Backword => {
+                    if current == 0 {
+                        current = self.rows.len() - 1;
+                    } else {
+                        current -= 1;
+                    }
+                }
+            }
+            if let Some(m) = self.rows[current]
+                .render
+                .match_indices(query)
+                .take(1)
+                .next()
+            {
+                self.last_match = Some(current);
+                self.cursor.y = current as u16;
+                self.cursor.x = self.rows[current].rx_to_cx(m.0);
                 self.rowsoff = self.rows.len() as u16;
                 break;
             }
