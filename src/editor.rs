@@ -334,7 +334,7 @@ impl Editor {
             self.insert_row(row, String::from(""))
         } else {
             let new_row = self.rows[row].split(self.cursor.x as usize);
-            self.insert_row(row, new_row);
+            self.insert_row(row + 1, new_row);
         }
         self.cursor.y += 1;
         self.cursor.x = 0;
@@ -369,7 +369,7 @@ impl Editor {
 
     fn save(&mut self) {
         if self.filename.is_empty() {
-            return;
+            self.filename = self.editor_prompt(&"save as");
         }
 
         let buf = self.rows_to_string();
@@ -381,7 +381,36 @@ impl Editor {
             self.set_status_msg(&format!("can't save I/O error: {}", errno()));
         }
     }
+    fn editor_prompt(&mut self, prompt: &str) -> String {
+        let mut buf = String::from("");
+        loop {
+            self.set_status_msg(&format!("{}:{}", prompt, buf));
+            let _ = self.refresh_screen();
+            let _ = self.screen.flush();
+            if let Ok(c) = self.keyboard.read_key() {
+                match c {
+                    KeyEvent {
+                        code: KeyCode::Enter,
+                        ..
+                    } => {
+                        self.set_status_msg("".to_string());
+                        return buf;
+                    }
 
+                    KeyEvent {
+                        code: KeyCode::Char(ch),
+                        modifiers: modif,
+                        ..
+                    } => {
+                        if matches!(modif, KeyModifiers::NONE | KeyModifiers::SHIFT) {
+                            buf.push(ch);
+                        }
+                    }
+                    _ => {}
+                }
+            }
+        }
+    }
     pub fn set_status_msg<T: Into<String>>(&mut self, message: T) {
         self.status_time = Instant::now();
         self.status_msg = message.into();
