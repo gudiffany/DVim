@@ -18,6 +18,12 @@ enum EditorKey {
     Down,
 }
 
+enum Prompt_Key {
+    Enter,
+    Escape,
+    Char(char),
+}
+
 pub struct Editor {
     filename: String,
     screen: Screen,
@@ -51,7 +57,7 @@ impl Editor {
         Ok(Self {
             screen: Screen::new()?,
             keyboard: Keyboard {},
-            status_msg: String::from("HELP: Ctrl+q = quit  && Ctrl+s = save"),
+            status_msg: String::from("HELP: Ctrl+q = quit && Ctrl+s = save && Ctrl+f = search"),
             status_time: Instant::now(),
             cursor: Position::default(),
             rows: if data.is_empty() {
@@ -114,6 +120,12 @@ impl Editor {
                     modifiers: KeyModifiers::CONTROL,
                     ..
                 } => self.save(),
+
+                KeyEvent {
+                    code: KeyCode::Char('f'),
+                    modifiers: KeyModifiers::CONTROL,
+                    ..
+                } => self.find(),
 
                 KeyEvent {
                     code: KeyCode::Char('l'),
@@ -369,9 +381,10 @@ impl Editor {
 
     fn save(&mut self) {
         if self.filename.is_empty() {
-            if let Some(filename) = self.editor_prompt("save as") {
+            if let Some(filename) = self.prompt("save as", None) {
                 self.filename = filename;
             } else {
+                self.set_status_msg("save aborted");
                 return;
             }
         }
@@ -386,26 +399,54 @@ impl Editor {
         }
     }
 
-    fn editor_prompt(&mut self, prompt: &str) -> Option<String> {
+    fn prompt(
+        &mut self,
+        prompt: &str,
+        callback: Option<fn(&mut Editor, &str, Prompt_Key)>,
+    ) -> Option<String> {
         let mut buf = String::from("");
         loop {
             self.set_status_msg(&format!("{}:{}", prompt, buf));
             let _ = self.refresh_screen();
             let _ = self.screen.flush();
             if let Ok(c) = self.keyboard.read_key() {
+                let mut prompt_key: Option<Prompt_Key> = None;
+
                 match c {
                     KeyEvent {
                         code: KeyCode::Enter,
                         ..
                     } => {
+                        if let Some(callback) = callback {
+                            callback(self, &buf, Prompt_Key::Enter);
+                        }
                         self.set_status_msg("");
                         return Some(buf);
                     }
                     KeyEvent {
                         code: KeyCode::Esc, ..
                     } => {
+                        if let Some(callback) = callback {
+                            callback(self, &buf, Prompt_Key::Escape);
+                        }
                         self.set_status_msg("");
                         return None;
+                    }
+
+                    KeyEvent {
+                        code: KeyCode::Char('h'),
+                        modifiers: KeyModifiers::CONTROL,
+                        ..
+                    }
+                    | KeyEvent {
+                        code: KeyCode::Backspace,
+                        ..
+                    }
+                    | KeyEvent {
+                        code: KeyCode::Delete,
+                        ..
+                    } => {
+                        buf.pop();
                     }
 
                     KeyEvent {
@@ -414,14 +455,39 @@ impl Editor {
                         ..
                     } => {
                         if matches!(modif, KeyModifiers::NONE | KeyModifiers::SHIFT) {
+                            prompt_key = Some(Prompt_Key::Char(ch));
                             buf.push(ch);
                         }
                     }
                     _ => {}
                 }
+                if let Some(callback) = callback {
+                    if let Some(key) = prompt_key {
+                        callback(self, &buf, key);
+                    }
+                }
             }
         }
     }
+
+    fn find(&mut self) {
+        self.prompt("Search (ESC to cancel)", Some(Editor::find_callback));
+    }
+
+    fn find_callback(&mut self, query: &str, event: Prompt_Key) {
+        if matches!(event, Prompt_Key::Enter | Prompt_Key::Escape) {
+            return;
+        }
+        for (i, raw) in self.rows.iter().enumerate() {
+            if let Some(m) = raw.render.match_indices(query).take(1).next() {
+                self.cursor.y = i as u16;
+                self.cursor.x = raw.rx_to_cx(m.0);
+                self.rowsoff = self.rows.len() as u16;
+                break;
+            }
+        }
+    }
+
     pub fn set_status_msg<T: Into<String>>(&mut self, message: T) {
         self.status_time = Instant::now();
         self.status_msg = message.into();

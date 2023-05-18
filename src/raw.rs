@@ -28,6 +28,20 @@ impl Raw {
         }
         rx as u16
     }
+
+    pub fn rx_to_cx(&self, rx: usize) -> u16 {
+        let mut cur_rx = 0;
+        for (cx, c) in self.chars.chars().enumerate() {
+            if c == '\t' {
+                cur_rx += (TAB_STOP - 1) - (cur_rx % TAB_STOP);
+            }
+            cur_rx += 1; 
+            if cur_rx > rx {
+                return cx as u16;
+            }
+        }
+        self.chars.len() as u16
+    }
     pub fn insert_char(&mut self, at: usize, c: char) {
         if at >= self.chars.len() {
             self.chars.push(c);
@@ -48,7 +62,7 @@ impl Raw {
     }
     pub fn split(&mut self, at: usize) -> String {
         let result = self.chars.split_off(at);
-        self.render =  Raw::render_raw(&self.chars);
+        self.render = Raw::render_raw(&self.chars);
         result
     }
     pub fn append_string(&mut self, s: &str) {
