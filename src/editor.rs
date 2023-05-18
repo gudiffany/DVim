@@ -369,7 +369,11 @@ impl Editor {
 
     fn save(&mut self) {
         if self.filename.is_empty() {
-            self.filename = self.editor_prompt(&"save as");
+            if let Some(filename) = self.editor_prompt("save as") {
+                self.filename = filename;
+            } else {
+                return;
+            }
         }
 
         let buf = self.rows_to_string();
@@ -381,7 +385,8 @@ impl Editor {
             self.set_status_msg(&format!("can't save I/O error: {}", errno()));
         }
     }
-    fn editor_prompt(&mut self, prompt: &str) -> String {
+
+    fn editor_prompt(&mut self, prompt: &str) -> Option<String> {
         let mut buf = String::from("");
         loop {
             self.set_status_msg(&format!("{}:{}", prompt, buf));
@@ -393,8 +398,14 @@ impl Editor {
                         code: KeyCode::Enter,
                         ..
                     } => {
-                        self.set_status_msg("".to_string());
-                        return buf;
+                        self.set_status_msg("");
+                        return Some(buf);
+                    }
+                    KeyEvent {
+                        code: KeyCode::Esc, ..
+                    } => {
+                        self.set_status_msg("");
+                        return None;
                     }
 
                     KeyEvent {
