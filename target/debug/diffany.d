@@ -1,1 +1,0 @@
-/home/diffany/桌面/dvim/DVim/target/debug/diffany: /home/diffany/桌面/dvim/DVim/src/editor.rs /home/diffany/桌面/dvim/DVim/src/keyboard.rs /home/diffany/桌面/dvim/DVim/src/lib.rs /home/diffany/桌面/dvim/DVim/src/main.rs /home/diffany/桌面/dvim/DVim/src/raw.rs /home/diffany/桌面/dvim/DVim/src/screen.rs
