@@ -46,6 +46,7 @@ pub struct Editor {
     quit_time: usize,
     last_match: Option<usize>,
     direction: SearchDirection,
+    save_hl: Option<usize>,
 }
 
 impl Editor {
@@ -90,6 +91,7 @@ impl Editor {
             quit_time: QUIT_TIME,
             last_match: None,
             direction: SearchDirection::Forword,
+            save_hl: None,
         })
     }
     pub fn start(&mut self) -> Result<()> {
@@ -521,6 +523,10 @@ impl Editor {
     }
 
     fn find_callback(&mut self, query: &str, event: PromptKey) {
+        if let Some(save_hl) = self.save_hl {
+            self.rows[save_hl].reset_hightlight();
+            self.save_hl = None;
+        }
         match event {
             PromptKey::Enter | PromptKey::Escape => {
                 self.last_match = None;
@@ -562,10 +568,14 @@ impl Editor {
                 .take(1)
                 .next()
             {
+                let start = m.0;
+                drop(m);
                 self.last_match = Some(current);
                 self.cursor.y = current as u16;
-                self.cursor.x = self.rows[current].rx_to_cx(m.0);
+                self.cursor.x = self.rows[current].rx_to_cx(start);
                 self.rowsoff = self.rows.len() as u16;
+                self.rows[current].hightlight_match(start, query.len());
+                self.save_hl = Some(current);
                 break;
             }
         }

@@ -70,21 +70,25 @@ impl Screen {
 
                 let mut hl_iter = rows[filerow].hl[start..end].iter();
                 let mut hl = hl_iter.next();
+                let mut current_color = Color::Reset;
                 for c in rows[filerow].render[start..end].to_string().chars() {
                     let hightlight = *hl.unwrap();
                     if hightlight == Highlight::Normal {
-                        self.stdout
-                            .queue(SetForegroundColor(Color::Reset))?
-                            .queue(Print(c))?;
+                        if current_color != Color::Reset {
+                            self.stdout.queue(SetForegroundColor(Color::Reset))?;
+                            current_color = Color::Reset;
+                        }
                     } else {
                         let color = hightlight.synatx_to_color();
-                        self.stdout
-                            .queue(SetForegroundColor(color))?
-                            .queue(Print(c))?
-                            .queue(SetForegroundColor(Color::Reset))?;
+                        if color != current_color {
+                            self.stdout.queue(SetForegroundColor(color))?;
+                            current_color = color;
+                        }
                     }
+                    self.stdout.queue(Print(c))?;
                     hl = hl_iter.next();
                 }
+                self.stdout.queue(SetForegroundColor(Color::Reset))?;
             }
         }
         Ok(())

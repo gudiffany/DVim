@@ -6,12 +6,14 @@ const TAB_STOP: usize = 8;
 pub enum Highlight {
     Normal,
     Number,
+    Match,
 }
 
 pub struct Raw {
     pub chars: String,
     pub render: String,
     pub hl: Vec<Highlight>,
+    save_hl: Vec<Highlight>,
 }
 
 impl Highlight {
@@ -19,6 +21,7 @@ impl Highlight {
         match self {
             Highlight::Normal => Color::White,
             Highlight::Number => Color::Red,
+            Highlight::Match => Color::DarkBlue,
         }
     }
 }
@@ -29,6 +32,7 @@ impl Raw {
             chars,
             render: String::new(),
             hl: Vec::new(),
+            save_hl: Vec::new(),
         };
         res.render_raw();
         res
@@ -123,5 +127,16 @@ impl Raw {
                 self.hl[i] = Highlight::Number;
             }
         }
+    }
+    pub fn hightlight_match(&mut self, start: usize, len: usize) {
+        self.save_hl = self.hl.clone();
+        for c in self.hl[start..start + len].iter_mut() {
+            *c = Highlight::Match;
+        }
+    }
+
+    pub fn reset_hightlight(&mut self) {
+        self.hl = self.save_hl.clone();
+        self.save_hl.clear();
     }
 }
