@@ -1,14 +1,37 @@
+use crossterm::style::Color;
+
 const TAB_STOP: usize = 8;
+
+#[derive(Clone, Copy, PartialEq)]
+pub enum Highlight {
+    Normal,
+    Number,
+}
 
 pub struct Raw {
     pub chars: String,
     pub render: String,
+    pub hl: Vec<Highlight>,
+}
+
+impl Highlight {
+    pub fn synatx_to_color(&self) -> Color {
+        match self {
+            Highlight::Normal => Color::White,
+            Highlight::Number => Color::Red,
+        }
+    }
 }
 
 impl Raw {
     pub fn new(chars: String) -> Self {
-        let render = Raw::render_raw(&chars);
-        Self { chars, render }
+        let mut res = Self {
+            chars,
+            render: String::new(),
+            hl: Vec::new(),
+        };
+        res.render_raw();
+        res
     }
     pub fn render_len(&self) -> usize {
         self.render.len()
@@ -35,7 +58,7 @@ impl Raw {
             if c == '\t' {
                 cur_rx += (TAB_STOP - 1) - (cur_rx % TAB_STOP);
             }
-            cur_rx += 1; 
+            cur_rx += 1;
             if cur_rx > rx {
                 return cx as u16;
             }
@@ -48,7 +71,7 @@ impl Raw {
         } else {
             self.chars.insert(at, c);
         }
-        self.render = Raw::render_raw(&self.chars);
+        self.render_raw()
     }
 
     pub fn del_char(&mut self, at: usize) -> bool {
@@ -56,24 +79,24 @@ impl Raw {
             false
         } else {
             self.chars.remove(at);
-            self.render = Raw::render_raw(&self.chars);
+            self.render_raw();
             true
         }
     }
     pub fn split(&mut self, at: usize) -> String {
         let result = self.chars.split_off(at);
-        self.render = Raw::render_raw(&self.chars);
+        self.render_raw();
         result
     }
     pub fn append_string(&mut self, s: &str) {
         self.chars.push_str(s);
-        self.render = Raw::render_raw(&self.chars);
+        self.render_raw()
     }
 
-    pub fn render_raw(chars: &String) -> String {
+    pub fn render_raw(&mut self) {
         let mut render = String::new();
         let mut idx = 0;
-        for c in chars.chars() {
+        for c in self.chars.chars() {
             match c {
                 '\t' => {
                     render.push(' ');
@@ -89,6 +112,16 @@ impl Raw {
                 }
             }
         }
-        render
+        self.render = render;
+        self.update_synxtax();
+    }
+
+    fn update_synxtax(&mut self) {
+        self.hl = vec![Highlight::Normal; self.render.len()];
+        for (i, c) in self.render.chars().enumerate() {
+            if c.is_digit(10) {
+                self.hl[i] = Highlight::Number;
+            }
+        }
     }
 }

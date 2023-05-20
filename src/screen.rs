@@ -1,7 +1,7 @@
 use crate::raw::*;
 use crossterm::{
     cursor,
-    style::{Color, Colors, Print, ResetColor, SetColors},
+    style::{Color, Colors, Print, ResetColor, SetColors, SetForegroundColor},
     terminal, QueueableCommand, Result,
 };
 use diffany::*;
@@ -66,9 +66,25 @@ impl Screen {
                     } else {
                         len
                     };
-                self.stdout
-                    .queue(cursor::MoveTo(0, raw))?
-                    .queue(Print(rows[filerow].render[start..end].to_string()))?;
+                self.stdout.queue(cursor::MoveTo(0, raw))?;
+
+                let mut hl_iter = rows[filerow].hl[start..end].iter();
+                let mut hl = hl_iter.next();
+                for c in rows[filerow].render[start..end].to_string().chars() {
+                    let hightlight = *hl.unwrap();
+                    if hightlight == Highlight::Normal {
+                        self.stdout
+                            .queue(SetForegroundColor(Color::Reset))?
+                            .queue(Print(c))?;
+                    } else {
+                        let color = hightlight.synatx_to_color();
+                        self.stdout
+                            .queue(SetForegroundColor(color))?
+                            .queue(Print(c))?
+                            .queue(SetForegroundColor(Color::Reset))?;
+                    }
+                    hl = hl_iter.next();
+                }
             }
         }
         Ok(())
@@ -133,7 +149,7 @@ impl Screen {
         }
 
         self.stdout
-            .queue(cursor::MoveTo(0, self.hight-1))?
+            .queue(cursor::MoveTo(0, self.hight - 1))?
             .queue(SetColors(Colors::new(Color::Black, Color::White)))?
             .queue(Print(format!("{status}{rstatus}")))?
             .queue(cursor::MoveTo(0, self.hight))?
